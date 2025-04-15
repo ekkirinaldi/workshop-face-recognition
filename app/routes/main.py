@@ -9,16 +9,33 @@ main_bp = Blueprint('main', __name__)
 
 @main_bp.route('/')
 def index():
-    """Render the main page with video stream"""
+    """
+    Render the main page with video stream for face recognition
+    
+    Returns:
+        HTML template: Rendered index.html template
+    """
     return render_template('index.html')
 
 @main_bp.route('/api/recognize', methods=['POST'])
 def recognize_face():
     """
-    Recognize faces in the uploaded image
+    Recognize faces in the uploaded image and match them against stored faces
     
-    Expects a JSON with base64 encoded image
-    Returns list of recognized faces with their locations
+    This endpoint:
+    1. Receives a base64 encoded image
+    2. Detects faces in the image
+    3. Generates embeddings for each face
+    4. Compares against stored face encodings
+    5. Returns recognition results
+    
+    Request:
+        JSON with 'image' field containing base64 encoded image
+    
+    Returns:
+        JSON response with:
+        - faces: List of detected faces with recognition results
+        - error: Error message if something went wrong
     """
     try:
         # Get image data from request

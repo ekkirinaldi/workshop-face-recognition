@@ -19,6 +19,7 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+prd-doc.md
 
 # Virtual Environment
 venv/
@@ -28,6 +29,7 @@ env/
 # IDE
 .idea/
 .vscode/
+.cursor/
 *.swp
 *.swo
 
@@ -46,3 +48,5 @@ uploads/
 
 # macOS
 .DS_Store 
+
+material/

@@ -8,13 +8,26 @@ admin_bp = Blueprint('admin', __name__)
 
 @admin_bp.route('/')
 def index():
-    """Render the admin interface"""
+    """
+    Render the admin interface for managing users and face encodings
+    
+    Returns:
+        HTML template: Rendered admin/index.html template with list of users
+    """
     users = User.query.all()
     return render_template('admin/index.html', users=users)
 
 @admin_bp.route('/users', methods=['GET'])
 def list_users():
-    """Get list of all users"""
+    """
+    Get list of all users with their face encoding counts
+    
+    Returns:
+        JSON response with list of users containing:
+        - id: User ID
+        - name: User's name
+        - face_count: Number of face encodings for the user
+    """
     users = User.query.all()
     return jsonify([{
         'id': user.id,
@@ -24,7 +37,22 @@ def list_users():
 
 @admin_bp.route('/users', methods=['POST'])
 def create_user():
-    """Create a new user with face encoding"""
+    """
+    Create a new user with optional face encoding
+    
+    This endpoint:
+    1. Creates a new user with provided name
+    2. Optionally processes face image if provided
+    3. Generates and stores face encoding
+    
+    Request:
+        Form data with:
+        - name: User's name
+        - face_image: Optional face image file
+    
+    Returns:
+        JSON response with created user details or error message
+    """
     try:
         name = request.form.get('name')
         if not name:
@@ -70,7 +98,23 @@ def create_user():
 
 @admin_bp.route('/users/<int:user_id>/faces', methods=['POST'])
 def add_face(user_id):
-    """Add a new face encoding to existing user"""
+    """
+    Add a new face encoding to an existing user
+    
+    This endpoint:
+    1. Finds the user by ID
+    2. Processes the provided face image
+    3. Generates and stores new face encoding
+    
+    Args:
+        user_id (int): ID of the user to add face encoding to
+    
+    Request:
+        Form data with face_image file
+    
+    Returns:
+        JSON response with updated user details or error message
+    """
     try:
         user = User.query.get_or_404(user_id)
         
@@ -110,7 +154,16 @@ def add_face(user_id):
 
 @admin_bp.route('/users/<int:user_id>', methods=['DELETE'])
 def delete_user(user_id):
-    """Delete a user and their face encodings"""
+    """
+    Delete a user and all their associated face encodings
+    
+    Args:
+        user_id (int): ID of the user to delete
+    
+    Returns:
+        Empty response with 204 status code on success
+        JSON error message on failure
+    """
     try:
         user = User.query.get_or_404(user_id)
         db.session.delete(user)

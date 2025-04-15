@@ -6,7 +6,26 @@ from PIL import Image
 from typing import List, Tuple, Optional
 
 class FaceRecognitionSystem:
+    """
+    Face recognition system using MTCNN for face detection and FaceNet for face recognition.
+    
+    This class handles:
+    - Face detection in images
+    - Face embedding generation
+    - Face comparison and matching
+    
+    Attributes:
+        device (str): Device to run models on ('cuda' or 'cpu')
+        mtcnn (MTCNN): Face detection model
+        facenet (InceptionResnetV1): Face recognition model
+    """
     def __init__(self, device='cuda' if torch.cuda.is_available() else 'cpu'):
+        """
+        Initialize the face recognition system
+        
+        Args:
+            device (str): Device to run models on ('cuda' or 'cpu')
+        """
         self.device = device
         
         # Initialize the MTCNN for face detection
@@ -28,11 +47,12 @@ class FaceRecognitionSystem:
         Detect faces in an image and return their bounding boxes
         
         Args:
-            image: numpy array of shape (H, W, C) in BGR format
+            image (numpy.ndarray): Input image in BGR format with shape (H, W, C)
         
         Returns:
-            faces: list of face images
-            boxes: list of bounding boxes [x1, y1, x2, y2]
+            Tuple containing:
+            - List of face images (numpy.ndarray)
+            - List of bounding boxes [x1, y1, x2, y2]
         """
         # Convert BGR to RGB
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -60,13 +80,13 @@ class FaceRecognitionSystem:
     
     def get_face_embedding(self, face_image: np.ndarray) -> Optional[np.ndarray]:
         """
-        Generate embedding for a face image
+        Generate embedding for a face image using FaceNet
         
         Args:
-            face_image: numpy array of shape (H, W, C) in BGR format
+            face_image (numpy.ndarray): Face image in BGR format
         
         Returns:
-            embedding: numpy array of shape (512,)
+            Optional[numpy.ndarray]: Face embedding vector of shape (512,) or None if error
         """
         try:
             # Convert BGR to RGB
@@ -98,14 +118,14 @@ class FaceRecognitionSystem:
     
     def compare_faces(self, embedding1: np.ndarray, embedding2: np.ndarray) -> float:
         """
-        Compare two face embeddings and return similarity score
+        Compare two face embeddings and return similarity score using cosine similarity
         
         Args:
-            embedding1: numpy array of shape (512,)
-            embedding2: numpy array of shape (512,)
+            embedding1 (numpy.ndarray): First face embedding vector
+            embedding2 (numpy.ndarray): Second face embedding vector
         
         Returns:
-            similarity: float between 0 and 1
+            float: Similarity score between 0 and 1 (1 means identical faces)
         """
         # Normalize embeddings
         embedding1 = embedding1 / np.linalg.norm(embedding1)
