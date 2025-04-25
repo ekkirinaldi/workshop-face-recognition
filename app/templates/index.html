@@ -9,8 +9,55 @@
             <video id="videoElement" autoplay playsinline></video>
             <canvas id="canvas"></canvas>
         </div>
+        
+        <div id="faceDumps" class="mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3>Recent Face Captures</h3>
+                <button id="deleteAllDumps" class="btn btn-danger">
+                    <i class="fas fa-trash"></i> Delete All
+                </button>
+            </div>
+            <div class="row" id="faceDumpsContainer">
+                <!-- Face dumps will be displayed here -->
+            </div>
+        </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.face-dump-card {
+    margin-bottom: 1rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    padding: 0.5rem;
+}
+
+.face-dump-image {
+    width: 100%;
+    height: auto;
+    border-radius: 0.25rem;
+}
+
+.face-dump-info {
+    margin-top: 0.5rem;
+}
+
+.face-dump-name {
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+}
+
+.face-dump-emotion {
+    color: #0d6efd;
+    margin-bottom: 0.25rem;
+}
+
+.face-dump-similarity {
+    color: #198754;
+}
+</style>
 {% endblock %}
 
 {% block extra_js %}
@@ -18,6 +65,11 @@
 const video = document.getElementById('videoElement');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
+const faceDumpsContainer = document.getElementById('faceDumpsContainer');
+let lastProcessTime = 0;
+let lastRecognitionTime = 0;
+const DUMP_INTERVAL = 5000; // 5 seconds in milliseconds
+const RECOGNITION_INTERVAL = 0; // 5 seconds for recognition too
 
 // Setup video stream
 async function setupCamera() {
@@ -66,35 +118,102 @@ function drawDetections(faces) {
         
         // Draw name label
         if (face.name) {
+            const labelText = `${face.name}${face.emotion ? ` (${face.emotion})` : ''}${face.similarity ? ` ${(face.similarity * 100).toFixed(1)}%` : ''}`;
+            
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            ctx.fillRect(x1, y1 - 25, ctx.measureText(face.name).width + 10, 20);
+            ctx.fillRect(x1, y1 - 25, ctx.measureText(labelText).width + 10, 20);
             
             ctx.fillStyle = '#fff';
             ctx.font = '14px Arial';
-            ctx.fillText(face.name, x1 + 5, y1 - 10);
+            ctx.fillText(labelText, x1 + 5, y1 - 10);
         }
     });
 }
 
+// Create face dump card
+function createFaceDumpCard(face) {
+    const col = document.createElement('div');
+    col.className = 'col-md-4 col-sm-6';
+    
+    const card = document.createElement('div');
+    card.className = 'face-dump-card';
+    
+    const img = document.createElement('img');
+    img.className = 'face-dump-image';
+    // Use the correct path to serve the image from the dumps directory
+    const imageFilename = face.image_path.split('/').pop();
+    img.src = `/uploads/dumps/${imageFilename}`;
+    
+    const info = document.createElement('div');
+    info.className = 'face-dump-info';
+    
+    const name = document.createElement('div');
+    name.className = 'face-dump-name';
+    name.textContent = face.name || 'Unknown';
+    
+    const emotion = document.createElement('div');
+    emotion.className = 'face-dump-emotion';
+    emotion.textContent = `Emotion: ${face.emotion || 'Unknown'}`;
+    
+    const similarity = document.createElement('div');
+    similarity.className = 'face-dump-similarity';
+    similarity.textContent = `Similarity: ${face.similarity ? (face.similarity * 100).toFixed(1) + '%' : 'Unknown'}`;
+    
+    info.appendChild(name);
+    info.appendChild(emotion);
+    info.appendChild(similarity);
+    
+    card.appendChild(img);
+    card.appendChild(info);
+    col.appendChild(card);
+    
+    return col;
+}
+
 // Process video frame
 async function processFrame() {
-    try {
-        const imageData = getFrameAsBase64();
-        
-        const response = await fetch('/api/recognize', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ image: imageData })
-        });
-        
-        const result = await response.json();
-        if (result.faces) {
-            drawDetections(result.faces);
+    const currentTime = Date.now();
+    
+    if (currentTime - lastRecognitionTime >= RECOGNITION_INTERVAL) {
+        try {
+            const imageData = getFrameAsBase64();
+            
+            const response = await fetch('/api/recognize', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ image: imageData })
+            });
+            
+            const result = await response.json();
+            console.log('Recognition result:', result);
+            
+            if (result.faces) {
+                drawDetections(result.faces);
+                
+                // Update face dumps only every 5 seconds
+                if (currentTime - lastProcessTime >= DUMP_INTERVAL) {
+                    // Get the latest face dumps from the server
+                    const dumpResponse = await fetch('/api/face-dumps');
+                    const dumpData = await dumpResponse.json();
+                    console.log('Face dumps:', dumpData);
+                    
+                    if (dumpData.dumps && dumpData.dumps.length > 0) {
+                        faceDumpsContainer.innerHTML = '';
+                        dumpData.dumps.forEach(face => {
+                            const card = createFaceDumpCard(face);
+                            console.log('Created face dump card:', card);
+                            faceDumpsContainer.appendChild(card);
+                        });
+                    }
+                    lastProcessTime = currentTime;
+                }
+            }
+            lastRecognitionTime = currentTime;
+        } catch (error) {
+            console.error('Error processing frame:', error);
         }
-    } catch (error) {
-        console.error('Error processing frame:', error);
     }
     
     requestAnimationFrame(processFrame);
@@ -110,5 +229,35 @@ async function processFrame() {
         alert('Error accessing camera. Please make sure you have granted camera permissions.');
     }
 })();
+
+// Delete all face dumps
+async function deleteAllFaceDumps() {
+    if (!confirm('Are you sure you want to delete all face captures? This action cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/face-dumps', {
+            method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to delete face dumps');
+        }
+        
+        // Clear the face dumps container
+        faceDumpsContainer.innerHTML = '';
+        
+        // Show success message
+        alert('All face captures have been deleted successfully');
+    } catch (error) {
+        console.error('Error deleting face dumps:', error);
+        alert(error.message);
+    }
+}
+
+// Add event listener for delete button
+document.getElementById('deleteAllDumps').addEventListener('click', deleteAllFaceDumps);
 </script>
 {% endblock %} 

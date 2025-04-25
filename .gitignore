@@ -50,3 +50,5 @@ uploads/
 .DS_Store 
 
 material/
+prd-doc.md
+.cursor
