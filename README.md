@@ -17,9 +17,14 @@ A real-time face recognition system with emotion detection and face capture capa
 
 ## Setup
 
+Run PostgreSQL
+```bash
+docker run --name postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=face_recognition -p 5432:5432 -d postgres:latest
+```
+
 1. Clone the repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/ekkirinaldi/workshop-face-recognition
 cd face-recognition-material
 ```
 
